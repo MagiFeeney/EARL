@@ -1,0 +1,4 @@
+gym
+matplotlib
+stable-baselines3
+h5py
