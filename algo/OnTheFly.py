@@ -68,7 +68,7 @@ class OnTheFly(object):
         for param in self.model.base.critic.parameters():
             value_loss += param.pow(2).sum() * self.l2_reg
         value_loss.backward()
-        return (value_loss.data.double().numpy(), get_flat_grad_from(self.model.base.critic).data.double().numpy())
+        return (value_loss.data.cpu().double().numpy(), get_flat_grad_from(self.model.base.critic).data.cpu().double().numpy())
 
 
     def get_kl(self, volatile=False):
@@ -100,8 +100,8 @@ class OnTheFly(object):
 
         return flat_grad_grad_kl + v * self.damping
 
-    def conjugate_gradients(self, Avp, b, nsteps, residual_tol=1e-10):
-        x = torch.zeros(b.size())
+    def conjugate_gradients(self, Avp, b, nsteps, device, residual_tol=1e-10):
+        x = torch.zeros(b.size()).to(device)
         r = b.clone()
         p = b.clone()
         rdotr = torch.dot(r, r)
@@ -118,19 +118,19 @@ class OnTheFly(object):
                 break
         return x
 
-    def step(self, max_kl, damping, l2_reg):
+    def step(self, max_kl, damping, l2_reg, device):
         self.l2_reg  = l2_reg
         self.damping = damping
         
         action_loss = self.get_loss()
 
         # update value network using LBFGS
-        flat_params, _, _ = scipy.optimize.fmin_l_bfgs_b(self.get_value_loss, get_flat_params_from(self.model.base.critic).double().numpy(), maxiter=25)
-        set_flat_params_to(self.model.base.critic, torch.Tensor(flat_params))
+        flat_params, _, _ = scipy.optimize.fmin_l_bfgs_b(self.get_value_loss, get_flat_params_from(self.model.base.critic).cpu().double().numpy(), maxiter=25)
+        set_flat_params_to(self.model.base.critic, torch.Tensor(flat_params).to(device))
     
         loss_grad = self.get_loss_grad(action_loss)
         
-        stepdir = self.conjugate_gradients(self.Fvp, -loss_grad, 10)
+        stepdir = self.conjugate_gradients(self.Fvp, -loss_grad, 10, device)
 
         shs = 0.5 * (stepdir * self.Fvp(stepdir)).sum(0, keepdim=True)
 

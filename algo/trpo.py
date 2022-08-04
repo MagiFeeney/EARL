@@ -9,6 +9,7 @@ from .retrace import get_flat_params_from
 class TRPO():
     def __init__(self,
                  actor_critic,
+                 device,
                  epochs=1,
                  num_mini_batch=1,
                  max_kl=None,
@@ -23,6 +24,7 @@ class TRPO():
         self.max_kl = max_kl
         self.damping = damping
         self.l2_reg = l2_reg
+        self.device = device
         
     def update(self, rollouts):
         advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
@@ -54,7 +56,7 @@ class TRPO():
                                       masks_batch, actions_batch, return_batch, old_dist, \
                                       old_action_log_probs_batch, adv_targ)
                 
-                value_loss, action_loss, dist_entropy = controller.step(self.max_kl, self.damping, self.l2_reg)
+                value_loss, action_loss, dist_entropy = controller.step(self.max_kl, self.damping, self.l2_reg, self.device)
 
                 action_loss_epoch += action_loss.item()
                 dist_entropy_epoch += dist_entropy.item()

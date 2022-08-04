@@ -60,6 +60,7 @@ def main():
     elif args.algo == 'trpo':
         agent = algo.TRPO(
             actor_critic,
+            device,
             max_kl = args.max_kl,
             damping = args.damping,
             l2_reg = args.l2_reg,
