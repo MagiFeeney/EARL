@@ -218,6 +218,37 @@ def default_split_fn(r):
     if match:
         return match.group(0)
 
+'''
+Dirname format is Env-name with algorithms folder categorized by seed:
+
+'logs/Hopper/PPO-0'
+'logs/Hopper/PPO-1'
+'logs/Hopper/TRPO-0'
+'logs/Hopper/TRPO-1'
+
+.
+.
+.
+
+'logs/Reacher/PPO-0'
+'logs/Reacher/PPO-1'
+'logs/Reacher/TRPO-0'
+'logs/Reacher/TRPO-1'
+
+.
+.
+.
+
+'''
+def _split_fn(r):
+    subs = r.dirname
+    if len(subs) >= 2:
+        if subs[-1] = '':
+            return subs[-3]
+        else:
+            return subs[-2]
+        
+
 def millions_formatter(x, pos):
     return f'{x / 1000000}'
 
@@ -232,6 +263,7 @@ def plot_results(
     average_group=False,
     shaded_std=True,
     shaded_err=True,
+    multiplots=False,
     figsize=None,
     legend_outside=False,
     resample=0,
@@ -239,7 +271,6 @@ def plot_results(
     tiling='vertical',
     xlabel=None,
     ylabel=None,
-    title=None
 ):
     '''
     Plot multiple Results objects
@@ -276,6 +307,9 @@ def plot_results(
         os.makedirs(results_dir)
     if split_fn is None: split_fn = lambda _ : ''
     if group_fn is None: group_fn = lambda _ : ''
+    if multiplots:
+        split_fn = _split_fn
+        
     sk2r = defaultdict(list) # splitkey2results
     for result in allresults:
         splitkey = split_fn(result)
@@ -298,8 +332,8 @@ def plot_results(
                 largest_divisor = i
         ncols = largest_divisor
         nrows = N // ncols
+        
     figsize = (figsize[0] * ncols, figsize[1] * nrows) or (6 * ncols, 6 * nrows)
-
     f, axarr = plt.subplots(nrows, ncols, sharex=False, squeeze=False, figsize=figsize)
 
     groups = list(set(group_fn(result) for result in allresults))
@@ -308,11 +342,8 @@ def plot_results(
     if average_group:
         resample = resample or default_samples
 
-    if legend_outside:
-        labels_to_go = []
-
-    g2l = {}
     for (isplit, sk) in enumerate(sorted(sk2r.keys())):
+        g2l = {}
         g2c = defaultdict(int)
         sresults = sk2r[sk]
         gresults = defaultdict(list)
@@ -366,14 +397,13 @@ def plot_results(
 
 
         # https://matplotlib.org/users/legend_guide.html
+        plt.tight_layout()
         if not legend_outside:
             if any(g2l.keys()):
                 ax.legend(
                     g2l.values(),
-                    [labels[g] for g in g2l][-1:] if ncols * nrows > 1 else [labels[g] for g in g2l],            
+                    g2l.keys(),
                     prop={'size': 14})
-        else:
-            labels_to_go.append([labels[g] for g in g2l][-1])
 
         ax.tick_params(labelsize=12)
         ax.set_title(sk)
@@ -381,12 +411,13 @@ def plot_results(
 
     # add legends outside, if legend_outside is true
     if legend_outside:
-        if len(labels_to_go) > 0 and any(g2l.keys()):
+        bbox_unit = 0.25 
+        if any(g2l.keys()):
             plt.legend(
                 g2l.values(),
-                labels_to_go,
+                g2l.keys(),
                 loc=2,
-                bbox_to_anchor=(1,1),
+                bbox_to_anchor=(bbox_unit * 2, bbox_unit * len(sk2r)),
                 prop={'size': 14})
 
     # add xlabels, but only to the bottom row

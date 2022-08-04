@@ -18,14 +18,15 @@ from common import utils
 from common.model import Policy
 from common.storage import RolloutStorage
 from common.arguments import get_args
-from gridworld.env2 import twoColorsEnv
+from gridworld.env import twoColorsEnv
 from gridworld.utils import storage, setup_seed
 from gridworld.plot import plot
 
 from stable_baselines3.common.monitor import Monitor
 
 
-# Not support parallel sampling since environment is self-defined
+# Not support parallel sampling since the environment is self-defined
+
 
 def main():
     args = get_args()
@@ -38,8 +39,6 @@ def main():
         torch.backends.cudnn.deterministic = True
 
     log_dir = os.path.expanduser(args.log_dir)
-    splits = args.log_dir.split('/')
-    sub_dir = splits[-1] if splits[-1] != '' else splits[-2]
     utils.cleanup_log_dir(log_dir)
 
     torch.set_num_threads(1)
@@ -74,6 +73,10 @@ def main():
         )
 
     
+    rollouts = RolloutStorage(args.num_steps, args.num_processes,
+                              env.observation_space.shape, env.action_space,
+                              actor_critic.recurrent_hidden_state_size)
+
     obs = env.reset()
     obs = torch.FloatTensor(obs).unsqueeze(0)
     rollouts.obs[0].copy_(obs)
@@ -83,7 +86,8 @@ def main():
     start = time.time()
     num_updates = int(
         args.num_env_steps) // args.num_steps // args.num_processes
-    
+
+
     for j in tqdm(range(num_updates)):
 
         if args.use_linear_lr_decay:
@@ -93,6 +97,7 @@ def main():
                 args.lr)
 
         for step in range(args.num_steps):
+
             # Sample actions
             with torch.no_grad():
                 value, action, action_log_prob, entropy, recurrent_hidden_states = actor_critic.act(
@@ -101,17 +106,17 @@ def main():
 
             # Obser reward and next obs
             obs, reward, done, infos = env.step(action)
-                                
+        
             # If done then clean the history of observations.
             masks = torch.FloatTensor(
                 [[0.0] if done_ else [1.0] for done_ in [done]])
             bad_masks = torch.FloatTensor(
                 [[0.0] if 'bad_transition' in info.keys() else [1.0]
-                 for info in [infos]])
+                 for info in [infos]])          
 
             if done:
                 obs = env.reset()
-                         
+                
             obs    = torch.FloatTensor(obs).unsqueeze(0)
             reward = torch.FloatTensor([reward]).unsqueeze(0)
             rollouts.insert(obs, recurrent_hidden_states, action,
@@ -131,9 +136,9 @@ def main():
         value_loss, action_loss, dist_entropy = agent.update(rollouts)
 
         rollouts.after_update()
-            
+    obs = env.reset()
 
+            
 if __name__ == "__main__":
     main()
-
 

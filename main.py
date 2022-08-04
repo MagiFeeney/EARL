@@ -3,6 +3,7 @@ import glob
 import os
 import time
 from collections import deque
+from tqdm import tqdm
 
 import gym
 import numpy as np
@@ -87,7 +88,7 @@ def main():
     start = time.time()
     num_updates = int(
         args.num_env_steps) // args.num_steps // args.num_processes
-    for j in range(num_updates):
+    for j in tqdm(range(num_updates)):
 
         if args.use_linear_lr_decay:
             # decrease learning rate linearly
