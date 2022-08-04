@@ -243,7 +243,7 @@ Dirname format is Env-name with algorithms folder categorized by seed:
 def _split_fn(r):
     subs = r.dirname
     if len(subs) >= 2:
-        if subs[-1] = '':
+        if subs[-1] == '':
             return subs[-3]
         else:
             return subs[-2]
@@ -254,7 +254,6 @@ def millions_formatter(x, pos):
 
 def plot_results(
     allresults, *,
-    labels,
     experiments_name,
     results_dir='images/',
     xy_fn=default_xy_fn,
