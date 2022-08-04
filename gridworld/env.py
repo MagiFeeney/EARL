@@ -86,4 +86,6 @@ class twoColorsEnv(Env):
         if self.needs_reset:
             self.targets[-1] = self.start
             self.state = self.embedding()
+            self.needs_reset = False
+            
         return self.state
