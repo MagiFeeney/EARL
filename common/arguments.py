@@ -167,11 +167,6 @@ def get_args():
         default=False,
         help='use a linear schedule on the learning rate')    
     parser.add_argument(
-        '--use-clipped-value-loss',
-        action='store_true',
-        default=False,
-        help='use a linear schedule on the learning rate')            
-    parser.add_argument(
         '--automatic_entropy_tuning',
         action='store_true',
         default=False,
