@@ -16,17 +16,13 @@ import torch.optim as optim
 import algo
 from common import utils
 from common.model import Policy
+from common.envs import make_vec_envs
 from common.storage import RolloutStorage
 from common.arguments import get_args
-from gridworld.env import twoColorsEnv
 from gridworld.utils import storage, setup_seed
 from gridworld.plot import plot
 
-from stable_baselines3.common.monitor import Monitor
-
-
-# Not support parallel sampling since the environment is self-defined
-
+# gym wrapped environment: twoColorsEnv and DiagonalEnv for proper time limit
 
 def main():
     args = get_args()
@@ -44,12 +40,12 @@ def main():
     torch.set_num_threads(1)
     device = torch.device("cuda:0" if args.cuda else "cpu")
 
-    env = twoColorsEnv()
-    env = Monitor(env, args.log_dir)
+    envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
+                         args.gamma, args.log_dir, device, False)
 
     actor_critic = Policy(
-        env.observation_space.shape,
-        env.action_space,
+        envs.observation_space.shape,
+        envs.action_space,
         base_kwargs={'recurrent': args.recurrent_policy})
     actor_critic.to(device)
 
@@ -74,18 +70,18 @@ def main():
 
     
     rollouts = RolloutStorage(args.num_steps, args.num_processes,
-                              env.observation_space.shape, env.action_space,
-                              actor_critic.recurrent_hidden_state_size)
+                              envs.observation_space.shape, envs.action_space,
+                              actor_critic.recurrent_hidden_state_size,
+                              args.alpha, args.temperature_decay_rate)                            
 
-    obs = env.reset()
-    obs = torch.FloatTensor(obs).unsqueeze(0)
+    obs = envs.reset()
     rollouts.obs[0].copy_(obs)
     rollouts.to(device)
 
 
     start = time.time()
     num_updates = int(
-        args.num_env_steps) // args.num_steps // args.num_processes
+        args.num_envs_steps) // args.num_steps // args.num_processes
 
 
     for j in tqdm(range(num_updates)):
@@ -105,7 +101,7 @@ def main():
                     rollouts.masks[step])
 
             # Obser reward and next obs
-            obs, reward, done, infos = env.step(action)
+            obs, reward, done, infos = envs.step(action)
         
             # If done then clean the history of observations.
             masks = torch.FloatTensor(
@@ -113,12 +109,7 @@ def main():
             bad_masks = torch.FloatTensor(
                 [[0.0] if 'bad_transition' in info.keys() else [1.0]
                  for info in [infos]])          
-
-            if done:
-                obs = env.reset()
                 
-            obs    = torch.FloatTensor(obs).unsqueeze(0)
-            reward = torch.FloatTensor([reward]).unsqueeze(0)
             rollouts.insert(obs, recurrent_hidden_states, action,
                             action_log_prob, value, reward, entropy, masks, bad_masks)
 
@@ -129,14 +120,13 @@ def main():
             rollouts.entropies[-1] = next_entropy
 
         
-        rollouts.augment_rewards(args.gamma, args.alpha, args.augment_type)
+        rollouts.augment_rewards(args.gamma, args.augment_type)
         rollouts.compute_returns(next_value, args.use_gae, args.gamma,
                                  args.gae_lambda, args.use_proper_time_limits)
 
         value_loss, action_loss, dist_entropy = agent.update(rollouts)
 
         rollouts.after_update()
-    obs = env.reset()
 
             
 if __name__ == "__main__":

@@ -78,7 +78,8 @@ def main():
   
     rollouts = RolloutStorage(args.num_steps, args.num_processes,
                               envs.observation_space.shape, envs.action_space,
-                              actor_critic.recurrent_hidden_state_size)
+                              actor_critic.recurrent_hidden_state_size,
+                              args.alpha, args.temperature_decay_rate)
 
     obs = envs.reset()
     rollouts.obs[0].copy_(obs)
@@ -126,9 +127,9 @@ def main():
                 rollouts.obs[-1], rollouts.recurrent_hidden_states[-1],
                 rollouts.masks[-1])
             rollouts.entropies[-1] = next_entropy
-
+            
         
-        rollouts.augment_rewards(args.gamma, args.alpha, args.augment_type)
+        rollouts.augment_rewards(args.gamma, args.augment_type)
         rollouts.compute_returns(next_value, args.use_gae, args.gamma,
                                  args.gae_lambda, args.use_proper_time_limits)
 

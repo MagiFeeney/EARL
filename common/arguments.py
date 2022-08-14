@@ -60,7 +60,7 @@ def get_args():
         '--entropy-coef',
         type=float,
         default=0,
-        help='entropy term coefficient (default: 0.1)')
+        help='entropy term coefficient (default: 0)')
     parser.add_argument(
         '--value-loss-coef',
         type=float,
@@ -176,6 +176,11 @@ def get_args():
         type=str,
         default=None,
         help='Augmentation type to choose: shifted | invariant | traditional')
+    parser.add_argument(
+        '--temperature-decay-rate',
+        type=float,
+        default=0.97,
+        help='gae lambda parameter (default: 0.97)')    
     parser.add_argument(
         '--l2-reg',
         type=float,

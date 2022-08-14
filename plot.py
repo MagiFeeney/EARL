@@ -12,7 +12,7 @@ def main(args):
 
     results_dir = 'images/'
 
-    pu.plot_results(results, experiments_name=args.figure_name, results_dir=results_dir, average_group=True, shaded_std=False, legend_outside=args.legend_outside, multiplots=args.multiplots, figsize=args.figsize, xlabel=args.xlabel, ylabel=args.ylabel)
+    pu.plot_results(results, experiments_name=args.figure_name, results_dir=results_dir, average_group=True, shaded_std=False, legend_outside=args.legend_outside, multiplots=args.multiplots, legend_last=args.legend_last, tiling=args.tiling, figsize=args.figsize, xlabel=args.xlabel, ylabel=args.ylabel)
 
     print("Plot successfully!")
 
@@ -21,8 +21,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser("Plot")
     parser.add_argument(
         '--log-dir',
-        default='/logs/',
-        help='a list of directories of results or a directory')    
+        nargs='+',
+        required=True,
+        help='a list of directories of results or a directory')
     parser.add_argument(
         '--figure-name',
         type=str,
@@ -38,6 +39,11 @@ if __name__ == "__main__":
         action='store_true',
         default=False,
         help='plot multiple subplots')
+    parser.add_argument(
+        '--legend-last',
+        action='store_true',
+        default=False,
+        help='Whether to place legend on the last image when using multiple plot')
     parser.add_argument(
         '--figsize',
         default=(8, 6),

@@ -42,10 +42,10 @@ class TRPO():
         for e in range(self.epochs):
             if self.actor_critic.is_recurrent:
                 data_generator = rollouts.recurrent_generator(
-                    advantages, old_dists, self.num_mini_batch)
+                    advantages, self.num_mini_batch, old_dists=old_dists)
             else:
                 data_generator = rollouts.feed_forward_generator(
-                    advantages, old_dists, self.num_mini_batch)
+                    advantages, self.num_mini_batch, old_dists=old_dists)
 
             for sample in data_generator:
                 obs_batch, recurrent_hidden_states_batch, actions_batch, \

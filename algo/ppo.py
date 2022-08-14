@@ -41,17 +41,13 @@ class PPO():
         action_loss_epoch = 0
         dist_entropy_epoch = 0
 
-        old_dists = self.actor_critic.get_features(rollouts.obs[:-1].view(-1, *rollouts.obs.size()[2:]), \
-                                                      rollouts.recurrent_hidden_states[:-1].view(-1, rollouts.recurrent_hidden_states.size(-1)), \
-                                                      rollouts.masks[:-1].view(-1, 1)).detach()        
-
         for e in range(self.ppo_epoch):
             if self.actor_critic.is_recurrent:
                 data_generator = rollouts.recurrent_generator(
-                    advantages, old_dists, self.num_mini_batch)
+                    advantages, self.num_mini_batch)
             else:
                 data_generator = rollouts.feed_forward_generator(
-                    advantages, old_dists, self.num_mini_batch)
+                    advantages, self.num_mini_batch)
 
             for sample in data_generator:
                 obs_batch, recurrent_hidden_states_batch, actions_batch, \
@@ -62,14 +58,6 @@ class PPO():
                 values, action_log_probs, dist_entropy = self.actor_critic.evaluate_actions(
                     obs_batch, recurrent_hidden_states_batch, masks_batch,
                     actions_batch)
-
-
-                # curr_dist = self.actor_critic.get_dist(
-                    # obs_batch, recurrent_hidden_states_batch, masks_batch)
-                
-                # kl_div = kl_divergence(self.actor_critic._dist(old_dist), curr_dist).mean().detach()
-                
-                # print(f"KL divergence {kl_div}")
 
                 ratio = torch.exp(action_log_probs -
                                   old_action_log_probs_batch)

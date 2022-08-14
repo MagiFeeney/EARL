@@ -241,7 +241,7 @@ Dirname format is Env-name with algorithms folder categorized by seed:
 
 '''
 def _split_fn(r):
-    subs = r.dirname
+    subs = r.dirname.split('/')
     if len(subs) >= 2:
         if subs[-1] == '':
             return subs[-3]
@@ -265,6 +265,7 @@ def plot_results(
     multiplots=False,
     figsize=None,
     legend_outside=False,
+    legend_last=False,
     resample=0,
     smooth_step=1.0,
     tiling='vertical',
@@ -329,8 +330,8 @@ def plot_results(
         for i in range(1, int(math.sqrt(N))+1):
             if N % i == 0:
                 largest_divisor = i
-        ncols = largest_divisor
-        nrows = N // ncols
+        nrows = largest_divisor
+        ncols = N // nrows
         
     figsize = (figsize[0] * ncols, figsize[1] * nrows) or (6 * ncols, 6 * nrows)
     f, axarr = plt.subplots(nrows, ncols, sharex=False, squeeze=False, figsize=figsize)
@@ -397,13 +398,22 @@ def plot_results(
 
         # https://matplotlib.org/users/legend_guide.html
         plt.tight_layout()
-        if not legend_outside:
-            if any(g2l.keys()):
-                ax.legend(
-                    g2l.values(),
-                    g2l.keys(),
-                    prop={'size': 14})
+        if not legend_outside:    
+            if legend_last:
+                if isplit == len(sk2r) - 1:
+                    if any(g2l.keys()):
+                        ax.legend(
+                            g2l.values(),
+                            g2l.keys(),
+                            prop={'size': 14})
+            else:
+                if any(g2l.keys()):
+                    ax.legend(
+                        g2l.values(),
+                        g2l.keys(),
+                        prop={'size': 14})
 
+                    
         ax.tick_params(labelsize=12)
         ax.set_title(sk)
         ax.xaxis.set_major_formatter(plt.FuncFormatter(millions_formatter))
@@ -433,7 +443,6 @@ def plot_results(
             if ylabel != None:
                 ax.set_ylabel(ylabel, fontsize=14)
 
-    plt.grid(color='w', linestyle='solid', linewidth=2)
     plt.tight_layout()
     plt.savefig(results_dir + experiments_name)
     plt.close(f)
