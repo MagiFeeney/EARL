@@ -72,8 +72,9 @@ def main():
     rollouts = RolloutStorage(args.num_steps, args.num_processes,
                               envs.observation_space.shape, envs.action_space,
                               actor_critic.recurrent_hidden_state_size,
-                              args.alpha, args.temperature_decay_rate)                            
-
+                              args.augment_type, args.alpha, args.gamma,
+                              args.temperature_decay_rate, args.epochs_drop)
+    
     obs = envs.reset()
     rollouts.obs[0].copy_(obs)
     rollouts.to(device)
@@ -81,7 +82,7 @@ def main():
 
     start = time.time()
     num_updates = int(
-        args.num_envs_steps) // args.num_steps // args.num_processes
+        args.num_env_steps) // args.num_steps // args.num_processes
 
 
     for j in tqdm(range(num_updates)):
@@ -105,10 +106,10 @@ def main():
         
             # If done then clean the history of observations.
             masks = torch.FloatTensor(
-                [[0.0] if done_ else [1.0] for done_ in [done]])
+                [[0.0] if done_ else [1.0] for done_ in done])
             bad_masks = torch.FloatTensor(
                 [[0.0] if 'bad_transition' in info.keys() else [1.0]
-                 for info in [infos]])          
+                 for info in infos])          
                 
             rollouts.insert(obs, recurrent_hidden_states, action,
                             action_log_prob, value, reward, entropy, masks, bad_masks)
@@ -117,12 +118,13 @@ def main():
             next_value, next_entropy = actor_critic.get_value(
                 rollouts.obs[-1], rollouts.recurrent_hidden_states[-1],
                 rollouts.masks[-1])
-            rollouts.entropies[-1] = next_entropy
+            rollouts.entropies[-1]   = next_entropy
+            rollouts.value_preds[-1] = next_value
 
         
-        rollouts.augment_rewards(args.gamma, args.augment_type)
-        rollouts.compute_returns(next_value, args.use_gae, args.gamma,
-                                 args.gae_lambda, args.use_proper_time_limits)
+        rollouts.augment_rewards(j)
+        rollouts.compute_returns(next_value, args.use_gae, args.gae_lambda,
+                                 args.use_proper_time_limits)
 
         value_loss, action_loss, dist_entropy = agent.update(rollouts)
 
@@ -131,4 +133,3 @@ def main():
             
 if __name__ == "__main__":
     main()
-

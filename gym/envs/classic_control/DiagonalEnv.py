@@ -1,5 +1,5 @@
 from gym import Env 
-from gym.spaces import Discrete, MultiDiscrete
+from gym.spaces import Discrete, Box
 import numpy as np
 import random
 
@@ -8,14 +8,16 @@ class DiagonalEnv(Env):
         self.grid_length = 10
         self.grid_width = 10
         self.grid_size = self.grid_length * self.grid_width
-        self.subgoal = self.grid_length - 1                   # Subgoal at top right corner
-        self.optimum = self.grid_size - self.grid_length      # Optimum at bottom left corner
+        self.subgoal = self.grid_length - 1                   # Subgoal at the top right corner
+        self.optimum = self.grid_size - self.grid_length      # Optimum at the bottom left corner
         self.start = 0
         self.agent_pos = self.start                           # Initial agent position
         self.action_space = Discrete(4)
         self.state = self.embedding()
-        self.observation_space = MultiDiscrete([2] * len(self.state))
-
+        self.observation_space = Box(
+                low=0, high=1, shape=(len(self.state),), dtype=np.float64
+            ) # For vectorization, we use Box instead of MultiDiscrete
+        
     def one_hot_encode(self, x, n_classes):
         return np.eye(n_classes)[x]
 
@@ -56,17 +58,15 @@ class DiagonalEnv(Env):
         # Calculate reward, observe items' behavior and update state
         if self.agent_pos == self.optimum:
             reward = 5
-            self.state = self.embedding()
             done = True
         elif self.agent_pos == self.subgoal:
             reward = 4.5
-            self.state = self.embedding()
             done = True
         else:
             reward = 0
-            self.state = self.embedding()
             done = False
 
+        self.state = self.embedding()            
         info = {}
         return self.state, reward, done, info
 

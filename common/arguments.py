@@ -8,25 +8,6 @@ def get_args():
     parser.add_argument(
         '--algo', default='a2c', help='algorithm to use: a2c | ppo | trpo')
     parser.add_argument(
-        '--gail',
-        action='store_true',
-        default=False,
-        help='do imitation learning with gail')
-    parser.add_argument(
-        '--gail-experts-dir',
-        default='./gail_experts',
-        help='directory that contains expert demonstrations for gail')
-    parser.add_argument(
-        '--gail-batch-size',
-        type=int,
-        default=128,
-        help='gail batch size (default: 128)')
-    parser.add_argument(
-        '--gail-epoch',
-        type=int,
-        default=5,
-        help='gail epochs (default: 5)')
-    parser.add_argument(
         '--lr',
         type=float,
         default=7e-4,
@@ -167,11 +148,6 @@ def get_args():
         default=False,
         help='use a linear schedule on the learning rate')    
     parser.add_argument(
-        '--automatic_entropy_tuning',
-        action='store_true',
-        default=False,
-        help='Automaically adjust α (default: False)')
-    parser.add_argument(
         '--augment-type',
         type=str,
         default=None,
@@ -179,8 +155,8 @@ def get_args():
     parser.add_argument(
         '--temperature-decay-rate',
         type=float,
-        default=0.97,
-        help='gae lambda parameter (default: 0.97)')    
+        default=0.93,
+        help='gae lambda parameter (default: 0.93)')    
     parser.add_argument(
         '--l2-reg',
         type=float,
@@ -192,10 +168,10 @@ def get_args():
         default=1e-1,
         help='damping (default: 1e-1)')
     parser.add_argument(
-        '--radius',
+        '--epochs-drop',
         type=int,
         default=10,
-        help='smooth radius (default: 10)')
+        help='how many epochs to drop the temperature (default: 10)')
         
     args = parser.parse_args()
 

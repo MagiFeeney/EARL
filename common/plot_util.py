@@ -200,10 +200,11 @@ def load_results(root_dir_or_dirs, enable_progress=True, enable_monitor=True, ve
     if verbose: print('loaded %i results'%len(allresults))
     return allresults
 
-COLORS = ['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black', 'purple', 'pink',
-        'brown', 'orange', 'teal',  'lightblue', 'lime', 'lavender', 'turquoise',
-        'darkgreen', 'tan', 'salmon', 'gold',  'darkred', 'darkblue']
+# COLORS = ['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black', 'purple', 'pink',
+#         'brown', 'orange', 'teal',  'lightblue', 'lime', 'lavender', 'turquoise',
+#         'darkgreen', 'tan', 'salmon', 'gold',  'darkred', 'darkblue']
 
+COLORS = ['violet', 'red', 'blue', 'green', 'gold', 'cyan']
 
 def default_xy_fn(r):
     x = np.cumsum(r.monitor.l)
@@ -361,7 +362,7 @@ def plot_results(
             else:
                 if resample:
                     x, y, counts = symmetric_ema(x, y, x[0], x[-1], resample, decay_steps=smooth_step)
-                l, = ax.plot(x, y, color=COLORS[groups.index(group) % len(COLORS)])
+                l, = ax.plot(x, y, color=COLORS[groups.index(group) % len(COLORS)], alpha=.6)
                 g2l[group] = l
         if average_group:
             for group in sorted(groups):
@@ -388,7 +389,7 @@ def plot_results(
                 ymean = np.mean(ys, axis=0)
                 ystd = np.std(ys, axis=0)
                 ystderr = ystd / np.sqrt(len(ys))
-                l, = axarr[idx_row][idx_col].plot(usex, ymean, color=color)
+                l, = axarr[idx_row][idx_col].plot(usex, ymean, color=color, alpha=.6)
                 g2l[group] = l
                 if shaded_err:
                     ax.fill_between(usex, ymean - ystderr, ymean + ystderr, color=color, alpha=.4)

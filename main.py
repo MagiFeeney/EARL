@@ -79,7 +79,8 @@ def main():
     rollouts = RolloutStorage(args.num_steps, args.num_processes,
                               envs.observation_space.shape, envs.action_space,
                               actor_critic.recurrent_hidden_state_size,
-                              args.alpha, args.temperature_decay_rate)
+                              args.augment_type, args.alpha, args.gamma,
+                              args.temperature_decay_rate, args.epochs_drop)
 
     obs = envs.reset()
     rollouts.obs[0].copy_(obs)
@@ -90,6 +91,7 @@ def main():
     start = time.time()
     num_updates = int(
         args.num_env_steps) // args.num_steps // args.num_processes
+    
     for j in tqdm(range(num_updates)):
 
         if args.use_linear_lr_decay:
@@ -126,12 +128,13 @@ def main():
             next_value, next_entropy = actor_critic.get_value(
                 rollouts.obs[-1], rollouts.recurrent_hidden_states[-1],
                 rollouts.masks[-1])
-            rollouts.entropies[-1] = next_entropy
+            rollouts.entropies[-1]   = next_entropy
+            rollouts.value_preds[-1] = next_value
             
         
-        rollouts.augment_rewards(args.gamma, args.augment_type)
-        rollouts.compute_returns(next_value, args.use_gae, args.gamma,
-                                 args.gae_lambda, args.use_proper_time_limits)
+        rollouts.augment_rewards(j)
+        rollouts.compute_returns(next_value, args.use_gae, args.gae_lambda,
+                                 args.use_proper_time_limits)
 
         value_loss, action_loss, dist_entropy = agent.update(rollouts)
 

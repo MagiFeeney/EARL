@@ -4,22 +4,27 @@ for index in "${!env[@]}"
 do
     for ((i=0;i<5;i+=1))
     do
+	
+	# PPO: Baseline
+        python main.py --env-name "${env[$index]}-v3" --algo ppo --clip-param 0.2 --use-gae --log-dir "logs/${env[$index]}/PPO-${i}" --seed $i --log-interval 1 --num-steps 2048 --num-processes 1 --lr 3e-4 --value-loss-coef 0.5 --ppo-epoch 10 --num-mini-batch 32 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 1000000 --use-linear-lr-decay --use-proper-time-limits	
 
-	python main.py --env-name "${env[$index]}-v3" --algo ppo --clip-param 0.2 --use-gae --log-dir "logs/${env[$index]}/PPO-${i}" --seed $i --log-interval 1 --num-steps 2048 --num-processes 1 --lr 3e-4 --value-loss-coef 0.5 --ppo-epoch 10 --num-mini-batch 32 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 1000000 --use-linear-lr-decay --use-proper-time-limits
+	# PPO: Reward shaping with entropy
+        python main.py --env-name "${env[$index]}-v3" --algo ppo --alpha 0.01 --clip-param 0.2 --use-gae --log-dir "logs/${env[$index]}/SPPO-${i}" --seed $i --log-interval 1 --num-steps 2048 --num-processes 1 --lr 3e-4 --value-loss-coef 0.5 --ppo-epoch 10 --num-mini-batch 32 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 1000000 --use-linear-lr-decay --use-proper-time-limits --augment-type "shifted" --temperature-decay-rate 0.93
 
-	python main.py --env-name "${env[$index]}-v3" --algo ppo --clip-param 0.2 --alpha 3e-7 --use-gae --log-dir "logs/${env[$index]}/SPPO-${i}" --seed $i --log-interval 1 --num-steps 2048 --num-processes 1 --lr 3e-4 --value-loss-coef 0.5 --ppo-epoch 10 --num-mini-batch 32 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 1000000 --use-linear-lr-decay --use-proper-time-limits --augment-type "shifted"
+	# PPO: Bootstrapping with state value function
+        python main.py --env-name "${env[$index]}-v3" --algo ppo --alpha 0.01 --clip-param 0.2 --use-gae --log-dir "logs/${env[$index]}/BPPO-${i}" --seed $i --log-interval 1 --num-steps 2048 --num-processes 1 --lr 3e-4 --value-loss-coef 0.5 --ppo-epoch 10 --num-mini-batch 32 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 1000000 --use-linear-lr-decay --use-proper-time-limits --augment-type "bootstrap" --temperature-decay-rate 0.93
 
-	python main.py --env-name "${env[$index]}-v3" --algo ppo --clip-param 0.2 --alpha 3e-7 --use-gae --log-dir "logs/${env[$index]}/IPPO-${i}" --seed $i --log-interval 1 --num-steps 2048 --num-processes 1 --lr 3e-4 --value-loss-coef 0.5 --ppo-epoch 10 --num-mini-batch 32 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 1000000 --use-linear-lr-decay --use-proper-time-limits --augment-type "invariant"
-	
-	python main.py --env-name "${env[$index]}-v3" --algo trpo --use-gae --log-dir "logs/${env[$index]}/TRPO-${i}" --seed $i --log-interval 1 --num-steps 4096 --num-processes 1 --ppo-epoch 1 --num-mini-batch 1 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 1000000 --max-kl 0.01 --damping 1e-1 --l2-reg 1e-3
-	
-	python main.py --env-name "${env[$index]}-v3" --algo trpo --use-gae --alpha 3e-7 --log-dir "logs/${env[$index]}/STRPO-${i}" --seed $i --log-interval 1 --num-steps 4096 --num-processes 1 --ppo-epoch 1 --num-mini-batch 1 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 1000000 --max-kl 0.01 --damping 1e-1 --l2-reg 1e-3 --augment-type "shifted"
+	# TRPO: Baseline
+	python main.py --env-name "${env[$index]}-v3" --algo trpo --use-gae --log-dir "logs/${env[$index]}/TRPO-${i}" --seed $i --log-interval 1 --num-steps 4096 --num-processes 1 --ppo-epoch 1 --num-mini-batch 1 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 1000000 --max-kl 0.1 --damping 1e-1 --l2-reg 1e-3
 
-	python main.py --env-name "${env[$index]}-v3" --algo trpo --use-gae --alpha 3e-7 --log-dir "logs/${env[$index]}/ITRPO-${i}" --seed $i --log-interval 1 --num-steps 4096 --num-processes 1 --ppo-epoch 1 --num-mini-batch 1 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 1000000 --max-kl 0.01 --damping 1e-1 --l2-reg 1e-3 --augment-type "invariant"	     	
+	# TRPO: Reward shaping with entropy
+	python main.py --env-name "${env[$index]}-v3" --algo trpo --use-gae --alpha 0.01 --log-dir "logs/${env[$index]}/STRPO-${i}" --seed $i --log-interval 1 --num-steps 4096 --num-processes 1 --ppo-epoch 1 --num-mini-batch 1 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 1000000 --max-kl 0.1 --damping 1e-1 --l2-reg 1e-3 --augment-type "shifted" --temperature-decay-rate 0.93
 	
-	python baselines.py --env-name "${env[$index]}-v3" --algo sac --seed $i --num-env-steps 1000000 --log-dir "logs/${env[$index]}/SAC-${i}"
-	
-	python baselines.py --env-name "${env[$index]}-v3" --algo td3 --seed $i --num-env-steps 1000000 --log-dir "logs/${env[$index]}/TD3-${i}"
-	
+	# TRPO: Bootstrapping with state value function
+	python main.py --env-name "${env[$index]}-v3" --algo trpo --use-gae --alpha 0.01 --log-dir "logs/${env[$index]}/BTRPO-${i}" --seed $i --log-interval 1 --num-steps 4096 --num-processes 1 --ppo-epoch 1 --num-mini-batch 1 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 1000000 --max-kl 0.1 --damping 1e-1 --l2-reg 1e-3 --augment-type "bootstrap" --temperature-decay-rate 0.93
+
     done
 done
+
+# Plot the result
+python plot.py --log-dir "logs" --figure-name "mujoco_1" --multiplots --legend-last --tiling "symmetric"

@@ -1,5 +1,5 @@
 from gym import Env 
-from gym.spaces import Discrete, MultiDiscrete
+from gym.spaces import Discrete, Box
 import numpy as np
 import random
 
@@ -8,15 +8,16 @@ class twoColorsEnv(Env):
         self.grid_length = 10
         self.grid_width = 10
         self.grid_size = self.grid_length * self.grid_width
-        self.subgoals = [self.grid_length - 1] # red (suboptimum)
+        self.subgoals = [self.grid_length - 1] # green (suboptimum)
         self.start = self.grid_size - self.grid_length
         auxiliary = [i for i in range(0, self.grid_size) if i not in self.subgoals]
-        self.targets = random.sample(auxiliary, 1) + [self.start] # Blue, agent
+        self.targets = random.sample(auxiliary, 1) + [self.start] # Blue (optimum), Red (agent)
         self.action_space = Discrete(4)
         self.state = self.embedding()
-        self.observation_space = MultiDiscrete([2] * len(self.state))
+        self.observation_space = Box(
+                low=0, high=1, shape=(len(self.state),), dtype=np.float64
+            ) # For vectorization, we use Box instead of MultiDiscrete
         self.needs_reset = False
-        self.rewards = [1.]
 
     def one_hot_encode(self, x, n_classes):
         return np.eye(n_classes)[x]
@@ -45,7 +46,7 @@ class twoColorsEnv(Env):
         elif action == 1:
             position = self.targets[-1] + self.grid_length
             if position <= self.grid_size - 1:
-                self.targets[-1] = position        
+                self.targets[-1] = position
         elif action == 2:
             if self.targets[-1] % self.grid_length == 0:
                 pass
@@ -61,20 +62,18 @@ class twoColorsEnv(Env):
 
         # Calculate reward, observe items' behavior and update state
         if self.targets[-1] == self.targets[0]:
-            reward = self.rewards[0]
+            reward = 1
             self.rand_loc()
-            self.state = self.embedding()
             done = True
         elif self.targets[-1] in self.subgoals:
             reward = 0.5
-            self.state = self.embedding()
             done = True
-            self.needs_reset = True
+            self.needs_reset = True            
         else:
             reward = 0
-            self.state = self.embedding()
             done = False
 
+        self.state = self.embedding()            
         info = {}
         return self.state, reward, done, info
 

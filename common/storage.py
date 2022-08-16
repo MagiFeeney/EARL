@@ -8,12 +8,12 @@ def _flatten_helper(T, N, _tensor):
 
 class RolloutStorage(object):
     def __init__(self, num_steps, num_processes, obs_shape, action_space,
-                 recurrent_hidden_state_size, alpha, decay_rate):
+                 recurrent_hidden_state_size, augment_type, alpha, gamma, decay_rate, epochs_drop):
         self.obs = torch.zeros(num_steps + 1, num_processes, *obs_shape)
         self.recurrent_hidden_states = torch.zeros(
             num_steps + 1, num_processes, recurrent_hidden_state_size)
         self.rewards = torch.zeros(num_steps, num_processes, 1)
-        self.entropies = torch.zeros(num_steps + 1, num_processes, 1)        
+        self.entropies = torch.zeros(num_steps + 1, num_processes, 1)       
         self.value_preds = torch.zeros(num_steps + 1, num_processes, 1)
         self.returns = torch.zeros(num_steps + 1, num_processes, 1)
         self.action_log_probs = torch.zeros(num_steps, num_processes, 1)
@@ -31,9 +31,11 @@ class RolloutStorage(object):
         self.bad_masks = torch.ones(num_steps + 1, num_processes, 1)
     
         self.num_steps = num_steps
+        self.augment_type = augment_type
         self.alpha = alpha
+        self.gamma = gamma
         self.decay_rate = decay_rate
-        self.threshold = 3e-7
+        self.epochs_drop = epochs_drop
         self.step = 0
 
     def to(self, device):
@@ -68,61 +70,56 @@ class RolloutStorage(object):
         self.masks[0].copy_(self.masks[-1])
         self.bad_masks[0].copy_(self.bad_masks[-1])
 
-    def augment_rewards(self, gamma, augtype):
-        if augtype == "shifted":
-            self.rewards.copy_(self.rewards + gamma * self.alpha * self.entropies[1:])
-        elif augtype == "invariant":
-            self.rewards.copy_(self.rewards + gamma * self.alpha * self.entropies[1:] - self.alpha * self.entropies[:-1])
-        elif augtype == "traditional":
-            self.rewards.copy_(self.rewards + self.alpha * self.entropies[:-1])
+    def augment_rewards(self, epoch):
+        if self.augment_type == "shifted":
+            self.rewards.copy_(self.rewards + self.gamma * self.alpha * self.entropies[1:])
+        elif self.augment_type == "bootstrap":
+            self.value_preds.copy_(self.value_preds + self.alpha * self.entropies)
         else:
             pass
 
-        self.alpha *= self.decay_rate
-        if self.alpha < self.threshold:
-            self.alpha = self.threshold  # Enforce minimal entropy bonus
-            self.decay_rate = 1
-        
+        if self.augment_type != None:
+            if (epoch + 1) % self.epochs_drop == 0:
+                self.alpha *= self.decay_rate
+
+
     def compute_returns(self,
                         next_value,
                         use_gae,
-                        gamma,
                         gae_lambda,
                         use_proper_time_limits=True):
         if use_proper_time_limits:
             if use_gae:
-                self.value_preds[-1] = next_value
                 gae = 0
                 for step in reversed(range(self.rewards.size(0))):
-                    delta = self.rewards[step] + gamma * self.value_preds[
+                    delta = self.rewards[step] + self.gamma * self.value_preds[
                         step + 1] * self.masks[step +
                                                1] - self.value_preds[step]
-                    gae = delta + gamma * gae_lambda * self.masks[step +
+                    gae = delta + self.gamma * gae_lambda * self.masks[step +
                                                                   1] * gae
                     gae = gae * self.bad_masks[step + 1]
                     self.returns[step] = gae + self.value_preds[step]
             else:
-                self.returns[-1] = next_value
+                self.returns[-1] = self.value_preds[-1]
                 for step in reversed(range(self.rewards.size(0))):
                     self.returns[step] = (self.returns[step + 1] * \
-                        gamma * self.masks[step + 1] + self.rewards[step]) * self.bad_masks[step + 1] \
+                        self.gamma * self.masks[step + 1] + self.rewards[step]) * self.bad_masks[step + 1] \
                         + (1 - self.bad_masks[step + 1]) * self.value_preds[step]
         else:
             if use_gae:
-                self.value_preds[-1] = next_value
                 gae = 0
                 for step in reversed(range(self.rewards.size(0))):
-                    delta = self.rewards[step] + gamma * self.value_preds[
+                    delta = self.rewards[step] + self.gamma * self.value_preds[
                         step + 1] * self.masks[step +
                                                1] - self.value_preds[step]
-                    gae = delta + gamma * gae_lambda * self.masks[step +
+                    gae = delta + self.gamma * gae_lambda * self.masks[step +
                                                                   1] * gae
                     self.returns[step] = gae + self.value_preds[step]
             else:
-                self.returns[-1] = next_value
+                self.returns[-1] = self.value_preds[-1]
                 for step in reversed(range(self.rewards.size(0))):
                     self.returns[step] = self.returns[step + 1] * \
-                        gamma * self.masks[step + 1] + self.rewards[step]
+                        self.gamma * self.masks[step + 1] + self.rewards[step]
 
     def feed_forward_generator(self,
                                advantages,                               
